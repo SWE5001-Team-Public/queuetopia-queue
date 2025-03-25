@@ -1,0 +1,31 @@
+services:
+  template-svc:
+    container_name: template-svc
+    build:
+      context: ../
+      dockerfile: Dockerfile
+    ports:
+      - "5900:5900"
+    restart: always
+    depends_on:
+      - template-svc-postgres
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:password@template-svc-postgres:5432/template_svc_db
+      ENVIRONMENT: local
+    command: [ 'uvicorn', 'app:app', '--host', '0.0.0.0', '--port', '5900' ]
+
+  template-svc-postgres:
+    container_name: template-svc-db
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: template_svc_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

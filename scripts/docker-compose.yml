@@ -1,0 +1,12 @@
+services:
+  template-svc:
+    container_name: template-svc
+    build:
+      context: ../
+      dockerfile: Dockerfile
+    ports:
+      - '5900:5900'
+    restart: always
+    env_file:
+      - ../.env.production
+    command: [ 'uvicorn', 'app:app', '--host', '0.0.0.0', '--port', '5900', '--workers', '4' ]
