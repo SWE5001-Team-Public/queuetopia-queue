@@ -1,22 +1,28 @@
-from sqlalchemy import Column, String, Integer, Sequence, Boolean
+import datetime
 import uuid
 
-from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 
-from db.database import Base
+from db.base import Base
 
 
-class UserTable(Base):
-  __tablename__ = "users"
+class StaticTable(Base):
+  __tablename__ = 'static'
+
+  key = Column(String(50), primary_key=True, index=True, nullable=False)
+  value = Column(String(100), nullable=False)
+  type = Column(String(100), nullable=False)
+
+
+class VirtualQueueTable(Base):
+  __tablename__ = "virtual_queue"
 
   id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
-  u_id = Column(Integer, Sequence('user_u_id_seq'), index=True, autoincrement=True, nullable=False)
-  email = Column(String, unique=True, index=True, nullable=False)
-  first_name = Column(String, nullable=False)
-  last_name = Column(String, nullable=False)
-  password = Column(String, nullable=False)
-  deactivated = Column(Boolean, default=False)
-
-  @hybrid_property
-  def display_id(self):
-    return f"U{self.u_id}"
+  queue_no = Column(Integer, nullable=False)
+  name = Column(String, nullable=False)
+  mobile_no = Column(String, nullable=False)
+  pax = Column(Integer, nullable=False)
+  status = Column(String, ForeignKey("static.key", onupdate="CASCADE"), default="Waiting", nullable=False)
+  store_id = Column(String, nullable=False)
+  created_at = Column(DateTime, default=datetime.datetime.now(), nullable=False)
+  updated_at = Column(DateTime, default=datetime.datetime.now(), nullable=False)

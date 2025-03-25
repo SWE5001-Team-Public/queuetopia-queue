@@ -65,7 +65,7 @@ If you want to run the app using the **development Docker Compose file**, use:
 Once the script completes, the application will be running on:
 
 ```
-http://localhost:5900
+http://localhost:5015
 ```
 
 ---
@@ -103,13 +103,13 @@ pip install -r requirements.txt
 Start the app by running:
 
 ```sh
-uvicorn app:app --host 0.0.0.0 --port 5900 --reload
+uvicorn app:app --host 0.0.0.0 --port 5015 --reload
 ```
 
 The FastAPI app should now be running at:
 
 ```
-http://127.0.0.1:5900
+http://127.0.0.1:5015
 ```
 
 ---
@@ -224,7 +224,7 @@ To stop and clean up the container and its image, run:
 | `./scripts/down.sh`                                   | Stop and remove the container        |
 | `./scripts/db-up.sh`                                  | Start PostgreSQL container           |
 | `./scripts/db-down.sh`                                | Stop and remove PostgreSQL           |
-| `uvicorn app:app --host 0.0.0.0 --port 5900 --reload` | Start the FastAPI app without Docker |
+| `uvicorn app:app --host 0.0.0.0 --port 5015 --reload` | Start the FastAPI app without Docker |
 | `docker ps`                                           | Check running containers             |
 | `docker logs template-svc`                            | View container logs                  |
 

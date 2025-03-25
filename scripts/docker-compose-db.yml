@@ -1,14 +1,14 @@
 services:
-  template-svc-postgres:
-    container_name: template-svc-db
+  queue-svc-postgres:
+    container_name: queue-svc-db
     image: postgres:15
     restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: template_svc_db
+      POSTGRES_DB: queue_db
     ports:
-      - "5432:5432"
+      - "5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 

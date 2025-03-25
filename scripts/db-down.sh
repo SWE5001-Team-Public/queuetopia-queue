@@ -1,10 +1,10 @@
 #!/bin/bash
 set -e
 
-DB_CONTAINER="template-svc-db"
-DB_IMAGE="queuetopia-template-svc-db"
+DB_CONTAINER="queue-svc-db"
+DB_IMAGE="queuetopia-queue-svc-db"
 COMPOSE_FILE="scripts/docker-compose-db.yml"
-VOLUME_NAME="queuetopia_template_postgres_data"
+VOLUME_NAME="queuetopia_queue_postgres_data"
 
 echo "Stopping and removing the PostgreSQL container..."
 if command -v docker-compose &> /dev/null; then
@@ -33,7 +33,7 @@ else
 fi
 
 echo "Cleaning up unused Docker resources..."
-docker image prune -af --filter "label=project=queuetopia-template-svc" || echo "No unused images to remove."
+docker image prune -af --filter "label=project=queuetopia-queue-svc" || echo "No unused images to remove."
 
 # Ensure Buildx images are also cleaned up (for multi-arch support)
 docker buildx prune -af || echo "No Buildx cache to clear."

@@ -1,20 +1,23 @@
-import ssl
+import logging
 import os
-from dotenv import load_dotenv
+import ssl
+
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.orm import sessionmaker
+
+from config import load_environment, setup_logging
+from db.base import Base
+from db.models import StaticTable
+
+load_environment()
+setup_logging()
+
+logger = logging.getLogger(__name__)
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "prod")
-print(f"🚀 Running in {ENVIRONMENT.upper()} environment")
-
-if ENVIRONMENT == "prod":
-  load_dotenv(".env.production")
-elif ENVIRONMENT == "local":
-  load_dotenv(".env.local")
-else:
-  load_dotenv(".env")  # Fallback to a default `.env` file
-
 DATABASE_URL = os.getenv("DATABASE_URL")
+
+logger.info(f"🚀 Running in {ENVIRONMENT.upper()} environment")
 
 # Ensure DATABASE_URL is set
 if not DATABASE_URL:
@@ -37,9 +40,6 @@ SessionLocal = sessionmaker(
   expire_on_commit=False
 )
 
-# Base model class
-Base = declarative_base()
-
 
 # Function to create tables asynchronously
 async def create_tables():
@@ -50,6 +50,23 @@ async def create_tables():
 # Run table creation when the application starts
 async def init_db():
   await create_tables()
+
+
+# Insert static values
+async def insert_static():
+  async with SessionLocal(bind=engine) as session:
+    try:
+      records = [
+        StaticTable(key='Waiting', value='Waiting', type='Status'),
+        StaticTable(key='Called', value='Called', type='Status'),
+        StaticTable(key='Missed', value='Missed', type='Status'),
+        StaticTable(key='Seated', value='Seated', type='Status'),
+      ]
+      session.add_all(records)
+      await session.commit()
+    except Exception as e:
+      await session.rollback()
+      logger.error(f"Error inserting records: {e}")
 
 
 # Dependency for async DB session

@@ -2,15 +2,15 @@
 set -e
 
 # Define container and image names
-DB_CONTAINER="template-svc-db"
-APP_IMAGE="queuetopia_template-template-svc"
-DB_IMAGE="queuetopia_template-template-svc-postgres"
+DB_CONTAINER="queue-svc-db"
+APP_IMAGE="queuetopia_queue-queue-svc"
+DB_IMAGE="queuetopia_queue-queue-svc-postgres"
 
 echo "Stopping and removing the Docker containers..."
 if command -v docker-compose &> /dev/null; then
-    docker-compose -p queuetopia_template down -v
+    docker-compose -p queuetopia_queue down -v
 else
-    docker compose -p queuetopia_template down -v
+    docker compose -p queuetopia_queue down -v
 fi
 
 # Stop and remove database container if running
@@ -30,7 +30,7 @@ docker rmi -f "$APP_IMAGE" || echo "Image $APP_IMAGE not found."
 docker rmi -f "$DB_IMAGE" || echo "Image $DB_IMAGE not found."
 
 echo "Cleaning up unused Docker resources..."
-docker image prune -af --filter "label=project=queuetopia-template-svc" || echo "No unused images to remove."
+docker image prune -af --filter "label=project=queuetopia-queue-svc" || echo "No unused images to remove."
 
 # Ensure buildx images are also cleaned up (for multi-arch support)
 docker buildx prune -af || echo "No Buildx cache to clear."
