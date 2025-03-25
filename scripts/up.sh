@@ -38,13 +38,13 @@ echo "Detected architecture: $ARCH"
 echo "Building the Docker image for platform: $PLATFORM"
 
 # Build the Docker image using Buildx for correct platform
-docker buildx build --platform "$PLATFORM" -t template-svc . --load
+docker buildx build --platform "$PLATFORM" -t queue-svc . --load
 
 echo "Starting the Docker container with $COMPOSE_FILE..."
 if command -v docker-compose &> /dev/null; then
-    docker-compose -f "$COMPOSE_FILE" -p queuetopia_template up -d --build
+    docker-compose -f "$COMPOSE_FILE" -p queuetopia_queue up -d --build
 else
-    docker compose -f "$COMPOSE_FILE" -p queuetopia_template up -d --build
+    docker compose -f "$COMPOSE_FILE" -p queuetopia_queue up -d --build
 fi
 
 echo "Checking running containers..."

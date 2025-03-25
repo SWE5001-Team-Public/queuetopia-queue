@@ -6,13 +6,13 @@ COMPOSE_FILE="scripts/docker-compose-db.yml"
 
 echo "Starting the PostgreSQL container..."
 if command -v docker-compose &> /dev/null; then
-    docker-compose -f "$COMPOSE_FILE" -p queuetopia_template up -d template-svc-postgres
+    docker-compose -f "$COMPOSE_FILE" -p queuetopia_queue up -d queue-svc-postgres
 else
-    docker compose -f "$COMPOSE_FILE" -p queuetopia_template up -d template-svc-postgres
+    docker compose -f "$COMPOSE_FILE" -p queuetopia_queue up -d queue-svc-postgres
 fi
 
 # Identify the correct PostgreSQL container name
-DB_CONTAINER=$(docker ps --format '{{.Names}}' | grep 'template-svc-db' || true)
+DB_CONTAINER=$(docker ps --format '{{.Names}}' | grep 'queue-svc-db' || true)
 
 if [[ -z "$DB_CONTAINER" ]]; then
     echo "❌ Error: PostgreSQL container not found!"
