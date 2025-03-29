@@ -25,3 +25,18 @@ async def create_queue_entry(request: schemas.CreateQueueEntry, db: AsyncSession
   except Exception as e:
     await db.rollback()
     raise HTTPException(status_code=500, detail=f"Failed to create virtual queue entry: {str(e)}")
+
+
+@router.get("/status/{id}", response_model=schemas.QueueEntryResponse)
+async def get_queue_entry(id: str, db: AsyncSession = Depends(get_db)):
+  try:
+    queue_entry = await crud.get_queue_entry(db, id)
+
+    if not queue_entry:
+      raise HTTPException(status_code=404, detail="Queue not found")
+
+    return queue_entry
+
+  except Exception as e:
+    await db.rollback()
+    raise HTTPException(status_code=500, detail=f"Failed to get virtual queue entry: {str(e)}")

@@ -38,3 +38,14 @@ async def create_queue_entry(db: AsyncSession, queue: CreateQueueEntry):
     await db.rollback()
     logger.error(e)
 
+
+async def get_queue_entry(db: AsyncSession, id: str):
+  try:
+    db_queue = await db.execute(
+      select(VirtualQueueTable).filter(VirtualQueueTable.id == id)
+    )
+    return db_queue.scalar()
+
+  except Exception as e:
+    await db.rollback()
+    logger.error(e)
