@@ -18,7 +18,7 @@ async def create_queue_entry(request: schemas.CreateQueueEntry, db: AsyncSession
       raise HTTPException(status_code=400, detail=f"Failed to join virtual queue")
 
     return JSONResponse(
-      status_code=200,
+      status_code=201,
       content={"id": new_queue.id, "queue_no": new_queue.queue_no, "store_id": new_queue.store_id}
     )
 
