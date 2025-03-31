@@ -27,3 +27,4 @@ class ReservationTable(Base):
   store_id = Column(String, nullable=False)
   created_at = Column(DateTime, default=datetime.datetime.now(), nullable=False)
   updated_at = Column(DateTime, default=datetime.datetime.now(), nullable=False)
+  called_at = Column(DateTime, default=None, nullable=True)

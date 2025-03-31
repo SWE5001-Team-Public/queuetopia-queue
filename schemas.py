@@ -32,6 +32,7 @@ class ReservationResponse(BaseModel):
   store_id: str
   created_at: datetime
   updated_at: datetime
+  called_at: datetime | None
 
   class Config:
     alias_generator = to_camel

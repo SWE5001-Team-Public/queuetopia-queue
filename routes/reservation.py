@@ -44,7 +44,10 @@ async def get_reservation(id: str, db: AsyncSession = Depends(get_db)):
 
 @router.post("/status/edit")
 async def edit_reservation_status(queue: schemas.ModifyReservationStatus, db: AsyncSession = Depends(get_db)):
-  updated_reservation = await crud.edit_reservation_status(db, queue)
+  if queue.status == "Called":
+    updated_reservation = await crud.call_reservation(db, queue.id)
+  else:
+    updated_reservation = await crud.edit_reservation_status(db, queue)
 
   if updated_reservation is None:
     raise HTTPException(status_code=404, detail="Reservation details not found")
