@@ -29,6 +29,8 @@ async def create_reservation(db: AsyncSession, queue: CreateReservation):
       pax=queue.pax,
       queue_id=queue.queue_id,
       queue_no=latest_number + 1,
+      created_at=datetime.datetime.now(),
+      updated_at=datetime.datetime.now(),
     )
     db.add(db_store)
     await db.commit()
