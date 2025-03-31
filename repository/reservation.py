@@ -57,10 +57,12 @@ async def get_reservation(db: AsyncSession, id: str):
 # Get the last n reservations by queue_id where status is not "Cancelled" or "Waiting"
 async def get_last_n_reservations(db: AsyncSession, queue_id: str, limit: int = 5):
   try:
+    today = datetime.datetime.now()
     db_queue = await db.execute(
       select(ReservationTable).filter(
         ReservationTable.queue_id == queue_id,
-        ReservationTable.status.notin_(["Cancelled", "Waiting"])
+        ReservationTable.status.notin_(["Cancelled", "Waiting"]),
+        func.date(ReservationTable.created_at) == today.date()
       ).order_by(ReservationTable.created_at.desc()).limit(limit)
     )
     return db_queue.scalars().all()
