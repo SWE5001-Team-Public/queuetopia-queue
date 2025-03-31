@@ -61,6 +61,7 @@ async def insert_static():
         StaticTable(key='Called', value='Called', type='Status'),
         StaticTable(key='Missed', value='Missed', type='Status'),
         StaticTable(key='Seated', value='Seated', type='Status'),
+        StaticTable(key='Cancelled', value='Cancelled', type='Status'),
       ]
       session.add_all(records)
       await session.commit()
