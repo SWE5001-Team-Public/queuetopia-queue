@@ -61,6 +61,7 @@ async def edit_reservation_status(db: AsyncSession, queue: ModifyReservationStat
     return None
 
   db_queue.status = queue.status
+  db_queue.updated_at = datetime.datetime.now()
 
   await db.commit()
   await db.refresh(db_queue)
