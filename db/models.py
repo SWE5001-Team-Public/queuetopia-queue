@@ -14,8 +14,8 @@ class StaticTable(Base):
   type = Column(String(100), nullable=False)
 
 
-class VirtualQueueTable(Base):
-  __tablename__ = "virtual_queue"
+class ReservationTable(Base):
+  __tablename__ = "reservation"
 
   id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
   queue_no = Column(Integer, nullable=False)
@@ -23,6 +23,7 @@ class VirtualQueueTable(Base):
   mobile_no = Column(String, nullable=False)
   pax = Column(Integer, nullable=False)
   status = Column(String, ForeignKey("static.key", onupdate="CASCADE"), default="Waiting", nullable=False)
+  queue_id = Column(String, nullable=False)
   store_id = Column(String, nullable=False)
   created_at = Column(DateTime, default=datetime.datetime.now(), nullable=False)
   updated_at = Column(DateTime, default=datetime.datetime.now(), nullable=False)

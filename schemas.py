@@ -13,20 +13,22 @@ class ConfigResponse(BaseModel):
   value: str
 
 
-class CreateQueueEntry(BaseModel):
+class CreateReservation(BaseModel):
   name: str
   mobile_no: str
   pax: int
+  queue_id: str
   store_id: str
 
 
-class QueueEntryResponse(BaseModel):
+class ReservationResponse(BaseModel):
   id: str
   queue_no: int
   name: str
   mobile_no: str
   pax: int
   status: str
+  queue_id: str
   store_id: str
   created_at: datetime
   updated_at: datetime
@@ -35,3 +37,8 @@ class QueueEntryResponse(BaseModel):
     alias_generator = to_camel
     populate_by_name = True
     from_attributes = True
+
+
+class ModifyReservationStatus(BaseModel):
+  id: str
+  status: str
