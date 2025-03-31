@@ -67,3 +67,21 @@ async def edit_reservation_status(db: AsyncSession, queue: ModifyReservationStat
   await db.refresh(db_queue)
 
   return db_queue
+
+
+async def call_reservation(db: AsyncSession, id: str):
+  """Edit reservation status to "Called" by its ID."""
+  result = await db.execute(select(ReservationTable).filter(ReservationTable.id == id))
+  db_queue = result.scalars().first()
+
+  if db_queue is None:
+    return None
+
+  db_queue.status = "Called"
+  db_queue.updated_at = datetime.datetime.now()
+  db_queue.called_at = datetime.datetime.now()
+
+  await db.commit()
+  await db.refresh(db_queue)
+
+  return db_queue
