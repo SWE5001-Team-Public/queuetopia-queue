@@ -33,9 +33,30 @@ async def get_reservation(id: str, db: AsyncSession = Depends(get_db)):
     reservation = await crud.get_reservation(db, id)
 
     if not reservation:
-      raise HTTPException(status_code=404, detail="Queue not found")
+      raise HTTPException(status_code=404, detail="Reservation not found")
 
     return reservation
+
+  except Exception as e:
+    await db.rollback()
+    raise HTTPException(status_code=500, detail=f"Failed to get reservation details: {str(e)}")
+
+
+@router.get("/waiting-time/{queueId}", response_model=float)
+async def get_waiting_time(queueId: str, db: AsyncSession = Depends(get_db)):
+  """Calculate waiting time for a queue by rolling up the last n reservations"""
+  try:
+    reservations = await crud.get_last_n_reservations(db, queueId)
+
+    if not reservations:
+      raise HTTPException(status_code=404, detail="Reservation not found")
+
+    # Calculate waiting time by summing up the difference between called_at created_at for each record, divided the number of records
+    total_waiting_time = sum(
+      (reservation.called_at - reservation.created_at).total_seconds() for reservation in reservations)
+    avg_waiting_time = total_waiting_time / len(reservations)
+
+    return avg_waiting_time
 
   except Exception as e:
     await db.rollback()
