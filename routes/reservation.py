@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.params import Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -76,3 +77,31 @@ async def edit_reservation_status(queue: schemas.ModifyReservationStatus, db: As
     content={"message": "Reservation status updated successfully", "id": updated_reservation.id,
              "queueId": updated_reservation.queue_id, "status": updated_reservation.status}
   )
+
+
+@router.get("/wait-list/{queueId}", response_model=list[schemas.ReservationResponse])
+async def get_reservations_by_status(
+  queueId: str,
+  status: str = Query(default="Waiting"),
+  db: AsyncSession = Depends(get_db)
+):
+  """
+  Get reservations filtered by status for a specific queue.
+
+  - queueId: The ID of the queue
+  - status: List of statuses to filter by (defaults to ["Waiting"])
+  """
+  try:
+    reservations = await crud.get_reservations_filter_status(db, queueId, status)
+
+    if not reservations:
+      return []
+
+    return reservations
+
+  except Exception as e:
+    await db.rollback()
+    raise HTTPException(
+      status_code=500,
+      detail=f"Failed to retrieve reservations: {str(e)}"
+    )

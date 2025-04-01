@@ -72,6 +72,26 @@ async def get_last_n_reservations(db: AsyncSession, queue_id: str, limit: int = 
     logger.error(e)
 
 
+async def get_reservations_filter_status(db: AsyncSession, queue_id: str, status: str = "Waiting"):
+  try:
+    today = datetime.datetime.now()
+
+    status = [s.strip() for s in status.split(",")]
+
+    db_queue = await db.execute(
+      select(ReservationTable).filter(
+        ReservationTable.queue_id == queue_id,
+        ReservationTable.status.in_(status),
+        func.date(ReservationTable.created_at) == today.date()
+      ).order_by(ReservationTable.created_at.asc())
+    )
+    return db_queue.scalars().all()
+
+  except Exception as e:
+    await db.rollback()
+    logger.error(e)
+
+
 async def edit_reservation_status(db: AsyncSession, queue: ModifyReservationStatus):
   """Edit reservation status by its ID."""
   result = await db.execute(select(ReservationTable).filter(ReservationTable.id == queue.id))
