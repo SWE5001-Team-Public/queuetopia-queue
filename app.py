@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from db.database import init_db, insert_static
-from routes import reservation
+from routes import config, reservation
 
 load_dotenv()
 
@@ -38,6 +38,7 @@ async def health_check():
 
 
 # Other routes
+app.include_router(config.router, prefix="/config", tags=["Config"])
 app.include_router(reservation.router, prefix="/reservation", tags=["Reservation"])
 
 if __name__ == "__main__":
