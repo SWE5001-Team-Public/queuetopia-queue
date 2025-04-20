@@ -1,13 +1,26 @@
-name: Main Workflow
+name: DevSecOps Pipeline
 
 on:
+  pull_request:
+    branches:
+      - "**"
+    paths:
+      - .github/workflows/semgrep.yml
   push:
     branches:
       - main
+    paths:
+      - .github/workflows/semgrep.yml
+  schedule:
+    - cron: "20 17 * * *" # Scan every day at 17:20 UTC.
   workflow_dispatch:
 
+permissions:
+  contents: read
+  security-events: write
+
 jobs:
-  security:
+  dependency-security:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -29,3 +42,208 @@ jobs:
 
       - name: Run Safety Security Check
         run: safety check -r requirements.txt
+
+      - name: OWASP Dependency-Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: "queuetopia-account"
+          path: "."
+          format: "HTML"
+          out: "reports"
+
+      - name: Upload Dependency Check Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: reports/
+
+  static-code-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pylint semgrep
+
+      - name: Run Python Code Quality Checks
+        run: |
+          PYLINT_OUTPUT=$(pylint --disable=all --enable=security-issue,import-error,typecheck *.py || true)
+          echo "$PYLINT_OUTPUT"
+          SCORE=$(echo "$PYLINT_OUTPUT" | grep -oP 'Your code has been rated at \K[0-9.]+' || echo "N/A")
+          echo "### Python Code Quality Score: $SCORE/10" >> $GITHUB_STEP_SUMMARY
+          echo "Full pylint output:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "$PYLINT_OUTPUT" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  semgrep:
+    name: semgrep-oss/scan
+    runs-on: ubuntu-latest
+
+    container:
+      image: semgrep/semgrep
+
+    if: (github.actor != 'dependabot[bot]')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Semgrep scan
+        run: |
+          # Install jq for JSON formatting
+          apt-get update && apt-get install -y jq
+
+          # Run scan and generate JSON report
+          semgrep scan --config auto --json > semgrep-results.json
+
+          # Generate summary for GitHub Actions
+          echo "### Semgrep Security Scan Results" >> $GITHUB_STEP_SUMMARY
+
+          # Extract and display findings count
+          FINDING_COUNT=$(jq '.results | length' semgrep-results.json)
+          echo "Total findings: $FINDING_COUNT" >> $GITHUB_STEP_SUMMARY
+
+          # Add summary of findings in clean JSON format
+          echo "#### Top findings:" >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          jq '.results[:5] | map({
+            path: .path,
+            line: .start.line,
+            message: .extra.message,
+            severity: .extra.severity
+          })' semgrep-results.json >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+          # Also generate SARIF format for GitHub code scanning integration
+          semgrep scan --config auto --sarif > semgrep-results.sarif
+
+      - name: Upload Semgrep JSON results
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-results-json
+          path: semgrep-results.json
+
+      - name: Upload Semgrep SARIF results
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-results-sarif
+          path: semgrep-results.sarif
+
+  infrastructure-security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Scan Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+
+  container-security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: account-mgr:latest
+          load: true
+
+      - name: Docker image scan
+        id: container-scan
+        uses: anchore/scan-action@v3
+        with:
+          image: "account-mgr:latest"
+          fail-build: true
+          severity-cutoff: "critical"
+          output-format: table
+        continue-on-error: true
+
+      - name: Report scan results
+        if: always()
+        run: |
+          echo "### Container Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.container-scan.outcome }}" == "failure" ]; then
+            echo "❌ **SCAN FAILED**: Critical vulnerabilities detected" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ **SCAN PASSED**: No critical vulnerabilities detected" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "See detailed report in the artifacts for more information." >> $GITHUB_STEP_SUMMARY
+
+  license-compliance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pip-licenses
+
+      - name: Check for license compliance
+        run: pip-licenses --format=json --with-license-file --with-urls > license-report.json
+
+      - name: Upload License Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-report
+          path: license-report.json
+
+  security-testing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+
+      - name: Run security unit tests
+        run: pytest tests/ --cov=. --cov-report=xml -m security || true
+
+  sbom-generation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          format: spdx-json
+          output-file: sbom.spdx.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.spdx.json
