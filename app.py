@@ -41,7 +41,7 @@ async def health_check():
   return {"status": "healthy"}
 
 
-@router.get("/load-test", tags=["System"])
+@router.post("/load-test", tags=["System"])
 async def load_test(
   cpu_load: int = Query(default=70, ge=10, le=99, description="CPU load percentage (10-99)"),
   duration: int = Query(default=5, ge=1, le=60, description="Duration in seconds (1-60)"),
