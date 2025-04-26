@@ -7,9 +7,39 @@ from db.database import get_db
 from repository import reservation as crud
 import schemas
 
+
+import os
+import httpx
+from config import load_environment
+load_environment()
+NOTIFICATION_URL = os.getenv("NOTIFICATION_URL")
+
 router = APIRouter()
 
+async def send_notification(to: str, body: str):
+    notification_data = {
+        "to": to,
+        "body": body
+    }
 
+    async with httpx.AsyncClient(verify=False, timeout=10) as client:
+        try:
+            wa_response = await client.post(f"{NOTIFICATION_URL}/send-whatsapp/", json=notification_data)
+            wa_response.raise_for_status()
+        except Exception as wa_error:
+            try:
+                sms_response = await client.post(f"{NOTIFICATION_URL}/send-sms/", json=notification_data)
+                sms_response.raise_for_status()
+            except Exception as sms_error:
+                raise HTTPException(
+                    status_code=502,
+                    detail={
+                        "message": "Both WhatsApp and SMS notifications failed.",
+                        "whatsapp_error": str(wa_error),
+                        "sms_error": str(sms_error)
+                    }
+                )
+            
 @router.post("/join")
 async def create_reservation(request: schemas.CreateReservation, db: AsyncSession = Depends(get_db)):
   try:
@@ -17,6 +47,11 @@ async def create_reservation(request: schemas.CreateReservation, db: AsyncSessio
 
     if not new_queue:
       raise HTTPException(status_code=400, detail=f"Failed to create reservation")
+    
+    await send_notification(
+    to=request.mobile_no,
+    body=f"Hi {request.name}, your reservation is confirmed! Queue No: {new_queue.queue_no}"
+    )
 
     return JSONResponse(
       status_code=201,
