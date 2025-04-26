@@ -10,6 +10,8 @@ import schemas
 
 import os
 import httpx
+from httpx import AsyncClient, RequestError, HTTPStatusError
+
 from config import load_environment
 load_environment()
 NOTIFICATION_URL = os.getenv("NOTIFICATION_URL")
@@ -17,29 +19,42 @@ NOTIFICATION_URL = os.getenv("NOTIFICATION_URL")
 router = APIRouter()
 
 async def send_notification(to: str, body: str):
-    notification_data = {
-        "to": to,
-        "body": body
-    }
+    notification_data = {"to": to, "body": body}
 
-    async with httpx.AsyncClient(verify=False, timeout=10) as client:
-        try:
-            wa_response = await client.post(f"{NOTIFICATION_URL}/send-whatsapp/", json=notification_data)
-            wa_response.raise_for_status()
-        except Exception as wa_error:
+    async with AsyncClient(timeout=10) as client:
+        # 1) Try WhatsApp with up to 3 attempts + exponential backoff
+        for i in range(3):
             try:
-                sms_response = await client.post(f"{NOTIFICATION_URL}/send-sms/", json=notification_data)
-                sms_response.raise_for_status()
-            except Exception as sms_error:
-                raise HTTPException(
-                    status_code=502,
-                    detail={
-                        "message": "Both WhatsApp and SMS notifications failed.",
-                        "whatsapp_error": str(wa_error),
-                        "sms_error": str(sms_error)
-                    }
-                )
-            
+                resp = await client.post(f"{NOTIFICATION_URL}/send-whatsapp/", json=notification_data)
+                resp.raise_for_status()
+                return  # success
+            except (RequestError, HTTPStatusError) as wa_err:
+                if i < 2:
+                    await asyncio.sleep(0.5 * 2**i)
+                else:
+                    last_wa_error = wa_err
+
+        # 2) Fallback to SMS with the same retry logic
+        for i in range(3):
+            try:
+                resp = await client.post(f"{NOTIFICATION_URL}/send-sms/", json=notification_data)
+                resp.raise_for_status()
+                return  # success
+            except (RequestError, HTTPStatusError) as sms_err:
+                if i < 2:
+                    await asyncio.sleep(0.5 * 2**i)
+                else:
+                    last_sms_error = sms_err
+
+        # 3) If both completely fail, raise a 502
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "message": "Both WhatsApp and SMS notifications failed.",
+                "whatsapp_error": str(last_wa_error),
+                "sms_error": str(last_sms_error),
+            },
+        )            
 @router.post("/join")
 async def create_reservation(request: schemas.CreateReservation, db: AsyncSession = Depends(get_db)):
   try:
