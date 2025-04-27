@@ -54,7 +54,7 @@ async def send_notification(to: str, body: str):
                 "whatsapp_error": str(last_wa_error),
                 "sms_error": str(last_sms_error),
             },
-        )            
+        )
 @router.post("/join")
 async def create_reservation(request: schemas.CreateReservation, db: AsyncSession = Depends(get_db)):
   try:
@@ -62,9 +62,9 @@ async def create_reservation(request: schemas.CreateReservation, db: AsyncSessio
 
     if not new_queue:
       raise HTTPException(status_code=400, detail=f"Failed to create reservation")
-    
+
     await send_notification(
-    to=request.mobile_no,
+    to="+65"+request.mobile_no,
     body=f"Hi {request.name}, your reservation is confirmed! Queue No: {new_queue.queue_no}"
     )
 
@@ -115,7 +115,15 @@ async def get_waiting_time(queueId: str, db: AsyncSession = Depends(get_db)):
 @router.post("/status/edit")
 async def edit_reservation_status(queue: schemas.ModifyReservationStatus, db: AsyncSession = Depends(get_db)):
   if queue.status == "Called":
+    reservation = await crud.get_reservation(db, queue.id)
+    if reservation is None:
+      raise HTTPException(status_code=404, detail="Reservation not found")
+
     updated_reservation = await crud.call_reservation(db, queue.id)
+    await send_notification(
+      to="+65"+reservation.mobile_no,
+      body=f"Hi {reservation.name}, your turn is up! Please proceed to the counter."
+    )
   else:
     updated_reservation = await crud.edit_reservation_status(db, queue)
 
