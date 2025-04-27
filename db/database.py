@@ -72,16 +72,6 @@ async def insert_static():
 
 
 # Dependency for async DB session
-#async def get_db():
-#  async with SessionLocal(bind=engine) as session:
-#    yield session
-# 3) Updated dependency
 async def get_db():
-    async with SessionLocal() as session:
-        try:
-            yield session
-            await session.commit()
-        except:
-            await session.rollback()
-            raise
-        # session is closed automatically here
+  async with SessionLocal(bind=engine) as session:
+    yield session
