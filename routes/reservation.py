@@ -1,60 +1,65 @@
+import asyncio
+import logging
+import os
+
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.params import Query
 from fastapi.responses import JSONResponse
+from httpx import AsyncClient, RequestError, HTTPStatusError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import schemas
+from config import load_environment, setup_logging
 from db.database import get_db
 from repository import reservation as crud
-import schemas
 
-
-import os
-import httpx
-from httpx import AsyncClient, RequestError, HTTPStatusError
-
-from config import load_environment
 load_environment()
 NOTIFICATION_URL = os.getenv("NOTIFICATION_URL")
 
 router = APIRouter()
 
+setup_logging()
+
+logger = logging.getLogger(__name__)
+
+
 async def send_notification(to: str, body: str):
-    notification_data = {"to": to, "body": body}
+  notification_data = {"to": to, "body": body}
 
-    async with AsyncClient(timeout=10) as client:
-        # 1) Try WhatsApp with up to 3 attempts + exponential backoff
-        for i in range(3):
-            try:
-                resp = await client.post(f"{NOTIFICATION_URL}/send-whatsapp/", json=notification_data)
-                resp.raise_for_status()
-                return  # success
-            except (RequestError, HTTPStatusError) as wa_err:
-                if i < 2:
-                    await asyncio.sleep(0.5 * 2**i)
-                else:
-                    last_wa_error = wa_err
+  async with AsyncClient(timeout=10) as client:
+    # 1) Try WhatsApp with up to 3 attempts + exponential backoff
+    for i in range(3):
+      try:
+        resp = await client.post(f"{NOTIFICATION_URL}/send-whatsapp/", json=notification_data)
+        resp.raise_for_status()
+        return  # success
+      except (RequestError, HTTPStatusError) as wa_err:
+        if i < 2:
+          await asyncio.sleep(0.5 * 2 ** i)
+        else:
+          last_wa_error = wa_err
 
-        # 2) Fallback to SMS with the same retry logic
-        for i in range(3):
-            try:
-                resp = await client.post(f"{NOTIFICATION_URL}/send-sms/", json=notification_data)
-                resp.raise_for_status()
-                return  # success
-            except (RequestError, HTTPStatusError) as sms_err:
-                if i < 2:
-                    await asyncio.sleep(0.5 * 2**i)
-                else:
-                    last_sms_error = sms_err
+    # 2) Fallback to SMS with the same retry logic
+    for i in range(3):
+      try:
+        resp = await client.post(f"{NOTIFICATION_URL}/send-sms/", json=notification_data)
+        resp.raise_for_status()
+        return  # success
+      except (RequestError, HTTPStatusError) as sms_err:
+        if i < 2:
+          await asyncio.sleep(0.5 * 2 ** i)
+        else:
+          last_sms_error = sms_err
 
-        # 3) If both completely fail, raise a 502
-        raise HTTPException(
-            status_code=502,
-            detail={
-                "message": "Both WhatsApp and SMS notifications failed.",
-                "whatsapp_error": str(last_wa_error),
-                "sms_error": str(last_sms_error),
-            },
-        )            
+    # 3) If both completely fail, raise a 502
+    logger.error(msg={
+      "message": "Both WhatsApp and SMS notifications failed.",
+      "whatsapp_error": str(last_wa_error),
+      "sms_error": str(last_sms_error),
+    })
+
+
 @router.post("/join")
 async def create_reservation(request: schemas.CreateReservation, db: AsyncSession = Depends(get_db)):
   try:
@@ -62,10 +67,10 @@ async def create_reservation(request: schemas.CreateReservation, db: AsyncSessio
 
     if not new_queue:
       raise HTTPException(status_code=400, detail=f"Failed to create reservation")
-    
+
     await send_notification(
-    to=request.mobile_no,
-    body=f"Hi {request.name}, your reservation is confirmed! Queue No: {new_queue.queue_no}"
+      to=f"+65{request.mobile_no}",
+      body=f"Hi {request.name}, your reservation is confirmed! Queue No: {new_queue.queue_no}"
     )
 
     return JSONResponse(
@@ -115,7 +120,15 @@ async def get_waiting_time(queueId: str, db: AsyncSession = Depends(get_db)):
 @router.post("/status/edit")
 async def edit_reservation_status(queue: schemas.ModifyReservationStatus, db: AsyncSession = Depends(get_db)):
   if queue.status == "Called":
+    reservation = await crud.get_reservation(db, queue.id)
+    if reservation is None:
+      raise HTTPException(status_code=404, detail="Reservation not found")
+
     updated_reservation = await crud.call_reservation(db, queue.id)
+    await send_notification(
+      to=f"+65{reservation.mobile_no}",
+      body=f"Hi {reservation.name}, your turn is up! Please proceed to the counter."
+    )
   else:
     updated_reservation = await crud.edit_reservation_status(db, queue)
 
