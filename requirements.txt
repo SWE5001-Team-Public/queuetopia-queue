@@ -19,7 +19,6 @@ exceptiongroup==1.2.2
 fastapi==0.115.10
 filelock==3.16.1
 greenlet==3.1.1
-h11==0.14.0
 idna==3.10
 Jinja2==3.1.6
 joblib==1.4.2
@@ -67,5 +66,5 @@ tqdm==4.67.1
 typer==0.15.2
 typing_extensions==4.12.2
 urllib3==2.3.0
-uvicorn==0.34.0
-httpx==0.24.0
+uvicorn==0.34.2
+httpx==0.28.1
