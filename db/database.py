@@ -30,7 +30,6 @@ ssl_context = ssl.create_default_context() if ENVIRONMENT == "prod" else None
 engine = create_async_engine(
   DATABASE_URL,
   echo=True,
-  pool_pre_ping=True,
   connect_args={"ssl": ssl_context} if ssl_context else {}
 )
 

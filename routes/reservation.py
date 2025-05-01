@@ -68,10 +68,12 @@ async def create_reservation(request: schemas.CreateReservation, db: AsyncSessio
     if not new_queue:
       raise HTTPException(status_code=400, detail=f"Failed to create reservation")
 
-    await send_notification(
-      to=f"+65{request.mobile_no}",
-      body=f"Hi {request.name}, your reservation is confirmed! Queue No: {new_queue.queue_no}"
+
+    return JSONResponse(
+      status_code=201,
+      content={"id": new_queue.id, "queue_no": new_queue.queue_no, "store_id": new_queue.store_id}
     )
+
   except Exception as e:
     await db.rollback()
     raise HTTPException(status_code=500, detail=f"Failed to create reservation: {str(e)}")
