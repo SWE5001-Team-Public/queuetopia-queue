@@ -3,7 +3,7 @@ annotated-types==0.7.0
 anyio==4.8.0
 async-timeout==5.0.1
 asyncpg==0.30.0
-Authlib==1.5.1
+Authlib==1.6.0
 bandit==1.8.3
 boolean.py==4.0
 CacheControl==0.14.2
